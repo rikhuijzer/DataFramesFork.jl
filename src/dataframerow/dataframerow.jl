@@ -633,3 +633,7 @@ function Base.push!(df::DataFrame, dfr::DataFrameRow; cols::Symbol=:setequal,
     end
     return df
 end
+
+metadata(dfr::DataFrameRow) = metadata(parent(dfr))
+metadata!(dfr::DataFrameRow, p; mode::Symbol) =
+    metadata!(parent(dfr), p, mode=mode)

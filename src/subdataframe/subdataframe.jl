@@ -344,3 +344,7 @@ function _replace_columns!(sdf::SubDataFrame, newdf::DataFrame)
 
     return sdf
 end
+
+metadata(sdf::SubDataFrame) = metadata(parent(sdf))
+metadata!(sdf::SubDataFrame, p; mode::Symbol) =
+    metadata!(parent(sdf), p, mode=mode)

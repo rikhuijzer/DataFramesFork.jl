@@ -417,3 +417,10 @@ function _findall(B::BitVector)::Union{UnitRange{Int}, Vector{Int}}
     end
     @assert false "should not be reached"
 end
+
+function _copy_metadata!(dst, src; mode::Symbol)
+    src_metadata = metadata(src)
+    if src_metadata !== nothing
+        foreach(p -> metadata!(dst, p, mode=mode), paris(src_metadata))
+    end
+end

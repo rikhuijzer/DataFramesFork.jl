@@ -92,6 +92,10 @@ Compat.hasproperty(itr::DataFrameRows, s::AbstractString) = haskey(index(parent(
 # Private fields are never exposed since they can conflict with column names
 Base.propertynames(itr::DataFrameRows, private::Bool=false) = propertynames(parent(itr))
 
+metadata(dfr::DataFrameRows) = metadata(parent(dfr))
+metadata!(dfr::DataFrameRows, p; mode::Symbol) =
+    metadata!(parent(dfr), p, mode=mode)
+
 # Iteration by columns
 
 const DATAFRAMECOLUMNS_DOCSTR = """
@@ -336,6 +340,10 @@ Base.show(dfcs::DataFrameColumns;
           kwargs...) =
     show(stdout, dfcs; allrows=allrows, allcols=allcols, rowlabel=rowlabel,
          summary=summary, eltypes=eltypes, truncate=truncate, kwargs...)
+
+metadata(dfc::DataFrameColumns) = metadata(parent(dfc))
+metadata!(dfc::DataFrameColumns, p; mode::Symbol) =
+    metadata!(parent(dfc), p, mode=mode)
 
 """
     mapcols(f::Union{Function, Type}, df::AbstractDataFrame)

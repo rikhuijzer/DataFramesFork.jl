@@ -165,9 +165,10 @@ julia> DataFrame([1 0; 2 0], :auto) # matrix constructor
    2 │     2      0
 ```
 """
-struct DataFrame <: AbstractDataFrame
+mutable struct DataFrame <: AbstractDataFrame
     columns::Vector{AbstractVector}
     colindex::Index
+    metadata::Union{Nothing, Dict{String, Any}}
 
     # the inner constructor should not be used directly
     function DataFrame(columns::Union{Vector{Any}, Vector{AbstractVector}},
@@ -218,7 +219,7 @@ struct DataFrame <: AbstractDataFrame
             firstindex(col) != 1 && _onebased_check_error(i, col)
         end
 
-        new(convert(Vector{AbstractVector}, columns), colindex)
+        new(convert(Vector{AbstractVector}, columns), colindex, nothing)
     end
 end
 
@@ -563,13 +564,15 @@ end
     idx = Index(lookup, u)
 
     if length(selected_columns) == 1
-        return DataFrame(AbstractVector[_columns(df)[selected_columns[1]][row_inds]],
-                         idx, copycols=false)
+        new_df = DataFrame(AbstractVector[_columns(df)[selected_columns[1]][row_inds]],
+                           idx, copycols=false)
     else
         # Computing integer indices once for all columns is faster
         selected_rows = T === Bool ? _findall(row_inds) : row_inds
-        _threaded_getindex(selected_rows, selected_columns, _columns(df), idx)
+        new_df = _threaded_getindex(selected_rows, selected_columns, _columns(df), idx)
     end
+    _copy_metadata!(new_df, df, :overwrite)
+    return new_df
 end
 
 @inline function Base.getindex(df::DataFrame, row_inds::AbstractVector{T}, ::Colon) where T
@@ -579,12 +582,14 @@ end
     idx = copy(index(df))
 
     if ncol(df) == 1
-        return DataFrame(AbstractVector[_columns(df)[1][row_inds]], idx, copycols=false)
+        new_df = DataFrame(AbstractVector[_columns(df)[1][row_inds]], idx, copycols=false)
     else
         # Computing integer indices once for all columns is faster
         selected_rows = T === Bool ? _findall(row_inds) : row_inds
-        _threaded_getindex(selected_rows, 1:ncol(df), _columns(df), idx)
+        new_df = _threaded_getindex(selected_rows, 1:ncol(df), _columns(df), idx)
     end
+    _copy_metadata!(new_df, df, :overwrite)
+    return new_df
 end
 
 @inline Base.getindex(df::DataFrame, row_inds::Not, col_inds::MultiColumnIndex) =
@@ -761,7 +766,9 @@ copies of column vectors in `df`.
 If `copycols=false`, return a new `DataFrame` sharing column vectors with `df`.
 """
 function Base.copy(df::DataFrame; copycols::Bool=true)
-    return DataFrame(copy(_columns(df)), copy(index(df)), copycols=copycols)
+    cdf = DataFrame(copy(_columns(df)), copy(index(df)), copycols=copycols)
+    _copy_metadata!(cdf, df, :overwrite)
+    return cdf
 end
 
 """
@@ -1658,4 +1665,31 @@ function allcombinations(::Type{DataFrame}, pairs::Pair{Symbol, <:Any}...)
     @assert inner == target_rows
     @assert size(out_df) == (target_rows, length(colnames))
     return out_df
+end
+
+metadata(df::DataFrame) = return getfield(df, :metadata)
+
+function metadata!(df:DataFrame, (k, v)::Pair{<:AbstractString,<:Any};
+                   mode::Symbol=:overwrite)
+    if !(mode in (:overwrite, :ignore, :error))
+        throw(ArgumentError("only :overwrite, :ignore, or :error values of " *
+                            "mode are allowed"))
+    end
+
+    mdf = metadata(df)
+    if mdf === nothing
+        df_meta = Dict{String, Any}()
+        setproperty!(df, :metdata, df_meta)
+    else
+        df_meta = mdf
+    end
+    if haskey(df_meta, k)
+        if mode == :overwrite
+            df_meta[k] = v
+        elseif mode == :error
+            throw(ArgumentError("Metadata for key $k already present."))
+        end
+    else
+        df_meta[k] = v
+    end
 end
