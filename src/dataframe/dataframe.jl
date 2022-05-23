@@ -220,7 +220,7 @@ mutable struct DataFrame <: AbstractDataFrame
             firstindex(col) != 1 && _onebased_check_error(i, col)
         end
 
-        new(convert(Vector{AbstractVector}, columns), colindex, nothing)
+        new(convert(Vector{AbstractVector}, columns), colindex, nothing, nothing)
     end
 end
 
