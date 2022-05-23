@@ -346,5 +346,9 @@ function _replace_columns!(sdf::SubDataFrame, newdf::DataFrame)
 end
 
 metadata(sdf::SubDataFrame) = metadata(parent(sdf))
-metadata!(sdf::SubDataFrame, p; mode::Symbol) =
-    metadata!(parent(sdf), p, mode=mode)
+hasmetadata(sdf::SubDataFrame) = hasmetadata(parent(sdf))
+
+metadata(sdf::SubDataFrame, col::ColumnIndex) =
+    metadata(parent(sdf), _names(sdf)[index(sdf)[col]])
+hasmetadata(sdf::SubDataFrame, col::ColumnIndex) =
+    hasmetadata(parent(sdf), _names(sdf)[index(dfr)[col]])

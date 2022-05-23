@@ -169,6 +169,7 @@ mutable struct DataFrame <: AbstractDataFrame
     columns::Vector{AbstractVector}
     colindex::Index
     metadata::Union{Nothing, Dict{String, Any}}
+    column_metadata::Union{Nothing, Dict{Int, Dict{String, Any}}}
 
     # the inner constructor should not be used directly
     function DataFrame(columns::Union{Vector{Any}, Vector{AbstractVector}},
@@ -1667,29 +1668,33 @@ function allcombinations(::Type{DataFrame}, pairs::Pair{Symbol, <:Any}...)
     return out_df
 end
 
-metadata(df::DataFrame) = return getfield(df, :metadata)
+function metadata(df::DataFrame)
+    meta = getfield(df, :metadata)
+    meta === nothing || return meta
+    new_meta = Dict{String, Any}()
+    setfield!(df, :metadata, new_meta)
+    return new_meta
+end
 
-function metadata!(df:DataFrame, (k, v)::Pair{<:AbstractString,<:Any};
-                   mode::Symbol=:overwrite)
-    if !(mode in (:overwrite, :ignore, :error))
-        throw(ArgumentError("only :overwrite, :ignore, or :error values of " *
-                            "mode are allowed"))
-    end
+function hasmetadata(df::DataFrame)
+    meta = getfield(df, :metadata)
+    return !(meta === nothing || isempty(meta))
+end
 
-    mdf = metadata(df)
-    if mdf === nothing
-        df_meta = Dict{String, Any}()
-        setproperty!(df, :metdata, df_meta)
+function metadata(df::DataFrame, col::ColumnIndex)
+    idx = index(df)[col]
+    cols_meta = getfield(df, :column_metadata)
+    if cols_meta === nothing
+        meta = Dict{Int, Dict{String, Any}}()
+        setfield!(df, :column_metadata, meta)
     else
-        df_meta = mdf
+        meta = cols_meta
     end
-    if haskey(df_meta, k)
-        if mode == :overwrite
-            df_meta[k] = v
-        elseif mode == :error
-            throw(ArgumentError("Metadata for key $k already present."))
-        end
-    else
-        df_meta[k] = v
-    end
+    return get!(meta, idx, Dict{String, Any}())
+end
+
+function hasmetadata(df::DataFrame, col::ColumnIndex)
+    idx = index(df)[col]
+    meta = getfield(df, :column_metadata)
+    return meta !== nothing && haskey(meta, idx)
 end

@@ -36,7 +36,7 @@
 * Add `allcombinations` function that returns a data frame created
   from all combinations of the passed vectors
   ([#3031](https://github.com/JuliaData/DataFrames.jl/pull/3031))
-* Add support for `metadata` and `metadata!` from DataAPI.jl
+* Add support for `metadata` and `hasmetadata` from DataAPI.jl
   ([#3055](https://github.com/JuliaData/DataFrames.jl/pull/3055))
 
 ## Previously announced breaking changes

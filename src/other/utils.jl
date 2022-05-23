@@ -418,9 +418,20 @@ function _findall(B::BitVector)::Union{UnitRange{Int}, Vector{Int}}
     @assert false "should not be reached"
 end
 
-function _copy_metadata!(dst, src; mode::Symbol)
-    src_metadata = metadata(src)
-    if src_metadata !== nothing
-        foreach(p -> metadata!(dst, p, mode=mode), paris(src_metadata))
+function _copy_metadata!(dst::DataFrame, src; mode::Symbol)
+    # TODO: define other allowed modes when needed
+    # currently :overwrite is only added as it was only needed at this stage
+    @assert mode == :overwrite
+    if hasmetadata(src) === true
+        src_metadata = metadata(src)
+        dst_metadata = metadata(dst)
+        foreach((k, v) -> dst_metadata[k] = v, paris(src_metadata))
+    end
+    for n in _names(dst)
+        if hasmetadata(src, n) === true
+            src_metadata = metadata(src, n)
+            dst_metadata = metadata(dst, n)
+            foreach((k, v) -> dst_metadata[k] = v, paris(src_metadata))
+        end
     end
 end

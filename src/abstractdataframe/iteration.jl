@@ -93,8 +93,10 @@ Compat.hasproperty(itr::DataFrameRows, s::AbstractString) = haskey(index(parent(
 Base.propertynames(itr::DataFrameRows, private::Bool=false) = propertynames(parent(itr))
 
 metadata(dfr::DataFrameRows) = metadata(parent(dfr))
-metadata!(dfr::DataFrameRows, p; mode::Symbol) =
-    metadata!(parent(dfr), p, mode=mode)
+hasmetadata(dfr::DataFrameRows) = hasmetadata(parent(dfr))
+
+metadata(dfr::DataFrameRows, col::ColumnIndex) = metadata(parent(dfr), col)
+hasmetadata(dfr::DataFrameRows, col::ColumnIndex) = hasmetadata(parent(dfr), col)
 
 # Iteration by columns
 
@@ -342,8 +344,10 @@ Base.show(dfcs::DataFrameColumns;
          summary=summary, eltypes=eltypes, truncate=truncate, kwargs...)
 
 metadata(dfc::DataFrameColumns) = metadata(parent(dfc))
-metadata!(dfc::DataFrameColumns, p; mode::Symbol) =
-    metadata!(parent(dfc), p, mode=mode)
+hasmetadata(dfc::DataFrameColumns) = hasmetadata(parent(dfc))
+
+metadata(dfc::DataFrameColumns, col::ColumnIndex) = metadata(parent(dfc), col)
+hasmetadata(dfc::DataFrameColumns, col::ColumnIndex) = hasmetadata(parent(dfc), col)
 
 """
     mapcols(f::Union{Function, Type}, df::AbstractDataFrame)
