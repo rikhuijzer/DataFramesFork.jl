@@ -423,15 +423,11 @@ function _copy_metadata!(dst::DataFrame, src; mode::Symbol)
     # currently :overwrite is only added as it was only needed at this stage
     @assert mode == :overwrite
     if hasmetadata(src) === true
-        src_metadata = metadata(src)
-        dst_metadata = metadata(dst)
-        foreach((k, v) -> dst_metadata[k] = v, paris(src_metadata))
+        merge!(metadata(dst), metadata(src))
     end
     for n in _names(dst)
         if hasmetadata(src, n) === true
-            src_metadata = metadata(src, n)
-            dst_metadata = metadata(dst, n)
-            foreach((k, v) -> dst_metadata[k] = v, paris(src_metadata))
+            merge!(metadata(dst, n), metadata(src, n))
         end
     end
 end

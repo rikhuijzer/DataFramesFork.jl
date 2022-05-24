@@ -169,7 +169,7 @@ mutable struct DataFrame <: AbstractDataFrame
     columns::Vector{AbstractVector}
     colindex::Index
     metadata::Union{Nothing, Dict{String, Any}}
-    column_metadata::Union{Nothing, Dict{Int, Dict{String, Any}}}
+    colmetadata::Union{Nothing, Dict{Int, Dict{String, Any}}}
 
     # the inner constructor should not be used directly
     function DataFrame(columns::Union{Vector{Any}, Vector{AbstractVector}},
@@ -1690,7 +1690,9 @@ function metadata(df::DataFrame, col::ColumnIndex)
     else
         meta = cols_meta
     end
-    return get!(meta, idx, Dict{String, Any}())
+    return get!(meta, idx) do
+        Dict{String, Any}()
+    end
 end
 
 function hasmetadata(df::DataFrame, col::ColumnIndex)
