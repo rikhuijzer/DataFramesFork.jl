@@ -47,6 +47,13 @@
   or older it is an in place operation.
   ([#3022](https://github.com/JuliaData/DataFrames.jl/pull/3022))
 
+## Internal changes
+* `DataFrame` is now a `mutable struct` and has two new fields
+  `metadata` and `colmetadata`; this change makes `DataFrame` objects
+  serialized under earlier versions of DataFrames.jl incompatible with
+  version 1.4
+  ([#3055](https://github.com/JuliaData/DataFrames.jl/pull/3055))
+
 ## Performance
 
 * Speed up `permute!` and `invpermute!` (and therefore sorting) 2x-8x

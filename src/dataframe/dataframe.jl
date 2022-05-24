@@ -572,7 +572,7 @@ end
         selected_rows = T === Bool ? _findall(row_inds) : row_inds
         new_df = _threaded_getindex(selected_rows, selected_columns, _columns(df), idx)
     end
-    _copy_metadata!(new_df, df, :overwrite)
+    _merge_metadata!(new_df, df)
     return new_df
 end
 
@@ -589,7 +589,7 @@ end
         selected_rows = T === Bool ? _findall(row_inds) : row_inds
         new_df = _threaded_getindex(selected_rows, 1:ncol(df), _columns(df), idx)
     end
-    _copy_metadata!(new_df, df, :overwrite)
+    _merge_metadata!(new_df, df)
     return new_df
 end
 
@@ -768,7 +768,7 @@ If `copycols=false`, return a new `DataFrame` sharing column vectors with `df`.
 """
 function Base.copy(df::DataFrame; copycols::Bool=true)
     cdf = DataFrame(copy(_columns(df)), copy(index(df)), copycols=copycols)
-    _copy_metadata!(cdf, df, :overwrite)
+    _merge_metadata!(cdf, df)
     return cdf
 end
 
@@ -1683,10 +1683,10 @@ end
 
 function metadata(df::DataFrame, col::ColumnIndex)
     idx = index(df)[col]
-    cols_meta = getfield(df, :column_metadata)
+    cols_meta = getfield(df, :colmetadata)
     if cols_meta === nothing
         meta = Dict{Int, Dict{String, Any}}()
-        setfield!(df, :column_metadata, meta)
+        setfield!(df, :colmetadata, meta)
     else
         meta = cols_meta
     end
@@ -1697,6 +1697,6 @@ end
 
 function hasmetadata(df::DataFrame, col::ColumnIndex)
     idx = index(df)[col]
-    meta = getfield(df, :column_metadata)
+    meta = getfield(df, :colmetadata)
     return meta !== nothing && haskey(meta, idx)
 end

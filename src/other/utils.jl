@@ -418,10 +418,7 @@ function _findall(B::BitVector)::Union{UnitRange{Int}, Vector{Int}}
     @assert false "should not be reached"
 end
 
-function _copy_metadata!(dst::DataFrame, src; mode::Symbol)
-    # TODO: define other allowed modes when needed
-    # currently :overwrite is only added as it was only needed at this stage
-    @assert mode == :overwrite
+function _merge_metadata!(dst::DataFrame, src)
     if hasmetadata(src) === true
         merge!(metadata(dst), metadata(src))
     end
