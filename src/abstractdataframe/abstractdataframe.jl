@@ -151,6 +151,9 @@ a vector) then:
 
 Mixing symbols and strings in `to` and `from` is not allowed.
 
+Rename operations do not affect metadata. Metadata attached to column number
+`i` remains attached to the same column number after operation.
+
 See also: [`rename`](@ref)
 
 # Examples
@@ -398,6 +401,8 @@ Base.propertynames(df::AbstractDataFrame, private::Bool=false) = copy(_names(df)
 Create a new `DataFrame` with the same column names and column element types
 as `df`. An optional second argument can be provided to request a number of rows
 that is different than the number of rows present in `df`.
+
+Similar does not propagate metadata.
 """
 function Base.similar(df::AbstractDataFrame, rows::Integer = size(df, 1))
     rows < 0 && throw(ArgumentError("the number of rows must be non-negative"))
@@ -410,6 +415,8 @@ end
 
 Create a new `DataFrame` with the same column names and column element types
 as `df` but with zero rows.
+
+`empty` does not propagate metadata.
 """
 Base.empty(df::AbstractDataFrame) = similar(df, 0)
 
@@ -492,6 +499,8 @@ Get a data frame with the `n` first rows of `df`.
 
 If `view=false` a freshly allocated `DataFrame` is returned.
 If `view=true` then a `SubDataFrame` view into `df` is returned.
+
+`first` propagates metadata.
 """
 @inline Base.first(df::AbstractDataFrame, n::Integer; view::Bool=false) =
     view ? Base.view(df, 1:min(n ,nrow(df)), :) : df[1:min(n, nrow(df)), :]
@@ -510,6 +519,8 @@ Get a data frame with the `n` last rows of `df`.
 
 If `view=false` a freshly allocated `DataFrame` is returned.
 If `view=true` then a `SubDataFrame` view into `df` is returned.
+
+`last` propagates metadata.
 """
 @inline Base.last(df::AbstractDataFrame, n::Integer; view::Bool=false) =
     view ? Base.view(df, max(1, nrow(df)-n+1):nrow(df), :) : df[max(1, nrow(df)-n+1):nrow(df), :]
@@ -853,6 +864,8 @@ If `disallowmissing` is `true` (the default when `view` is `false`)
 then columns specified in `cols` will be converted so as not to allow for missing
 values using [`disallowmissing!`](@ref).
 
+`dropmissing` propagates metadata.
+
 See also: [`completecases`](@ref) and [`dropmissing!`](@ref).
 
 # Examples
@@ -931,6 +944,8 @@ If `cols` is provided, only missing values in the corresponding columns are cons
 
 If `disallowmissing` is `true` (the default) then the `cols` columns will
 get converted using [`disallowmissing!`](@ref).
+
+`dropmissing!` retains metadata.
 
 See also: [`dropmissing`](@ref) and [`completecases`](@ref).
 
@@ -1021,6 +1036,8 @@ data frames.
     collections, but it is generally recommended to use the [`subset`](@ref)
     function instead as it is consistent with other DataFrames.jl functions
     (as opposed to `filter`).
+
+`filter` propagates metadata.
 
 See also: [`filter!`](@ref)
 
@@ -1147,6 +1164,8 @@ data frames.
     collections, but it is generally recommended to use the [`subset!`](@ref)
     function instead as it is consistent with other DataFrames.jl functions
     (as opposed to `filter!`).
+
+`filter!` retains metadata.
 
 See also: [`filter`](@ref)
 
@@ -1380,11 +1399,12 @@ retaining in each case the first occurrence of a given combination of values
 in selected columns or their transformations. `cols` can be any column
 selector or transformation accepted by [`select`](@ref).
 
-
 For `unique`, if `view=false` a freshly allocated `DataFrame` is returned,
 and if `view=true` then a `SubDataFrame` view into `df` is returned.
 
 `unique!` updates `df` in-place and does not support the `view` keyword argument.
+
+`unique!` retains metadata and `unique` propagates metadata.
 
 See also [`nonunique`](@ref).
 
@@ -1466,6 +1486,8 @@ filled with the `fill` value (`missing` by default).
 If `allowduplicates=false` (the default) `indexcols` may only contain
 unique combinations of `indexcols` values. If `allowduplicates=true`
 duplicates are allowed.
+
+`fillcombinations` propagates metadata.
 
 # Examples
 ```jldoctest
@@ -1611,6 +1633,9 @@ source (without copying). This option should be used with caution as mutating
 either the columns in sources or in the returned `DataFrame` might lead to
 the corruption of the other object.
 
+`hcat` propagates metadata. If there is table level metadata with the same
+key but different value across tables it is dropped.
+
 # Example
 ```jldoctest
 julia> df1 = DataFrame(A=1:3, B=1:3)
@@ -1707,6 +1732,8 @@ as with `vcat` for `AbstractVector`s.
 
 `vcat` ignores empty data frames, making it possible to initialize an empty
 data frame at the beginning of a loop and `vcat` onto it.
+
+`vcat` drops metadata.
 
 # Example
 ```jldoctest
@@ -2029,6 +2056,8 @@ Construct a data frame by repeating rows in `df`. `inner` specifies how many
 times each row is repeated, and `outer` specifies how many times the full set
 of rows is repeated.
 
+`repeat` propagates metadata.
+
 # Example
 ```jldoctest
 julia> df = DataFrame(a=1:2, b=3:4)
@@ -2069,6 +2098,8 @@ end
 
 Construct a data frame by repeating each row in `df` the number of times
 specified by `count`.
+
+`repeat` propagates metadata.
 
 # Example
 ```jldoctest
@@ -2160,6 +2191,8 @@ If `cols` is omitted all columns in the data frame are converted.
 If `error=false` then columns containing a `missing` value will be skipped instead
 of throwing an error.
 
+`disallowmissing` propagates metadata.
+
 **Examples**
 
 ```jldoctest
@@ -2226,7 +2259,9 @@ function Missings.disallowmissing(df::AbstractDataFrame,
             push!(newcols, copy(x))
         end
     end
-    return DataFrame(newcols, _names(df), copycols=false)
+    new_df = DataFrame(newcols, _names(df), copycols=false)
+    _merge_metadata!(new_df, df)
+    return new_df
 end
 
 """
@@ -2238,6 +2273,8 @@ to element type `Union{T, Missing}` from `T` to allow support for missing values
 `cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
 
 If `cols` is omitted all columns in the data frame are converted.
+
+`allowmissing` propagates metadata.
 
 **Examples**
 
@@ -2272,7 +2309,9 @@ function Missings.allowmissing(df::AbstractDataFrame,
             push!(newcols, copy(x))
         end
     end
-    return DataFrame(newcols, _names(df), copycols=false)
+    new_df = DataFrame(newcols, _names(df), copycols=false)
+    _merge_metadata!(new_df, df)
+    return new_df
 end
 
 """
@@ -2289,6 +2328,8 @@ elements are not copied, and thus if they are mutable changing them in the
 returned `DataFrame` will affect `df`.
 
 `cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
+
+`flatten` propagates metadata.
 
 # Examples
 
@@ -2383,6 +2424,7 @@ function flatten(df::AbstractDataFrame,
         insertcols!(new_df, col, _names(df)[col] => flattened_col)
     end
 
+    _merge_metadata!(new_df, df)
     return new_df
 end
 
@@ -2409,6 +2451,8 @@ Base.setindex!(::AbstractDataFrame, ::Any, ::Union{Symbol, Integer, AbstractStri
 
 Return a data frame containing the rows in `df` in reversed order.
 If `start` and `stop` are provided, only rows in the `start:stop` range are affected.
+
+`reverse` propagates metadata.
 
 # Examples
 
@@ -2460,6 +2504,8 @@ If `start` and `stop` are provided, only rows in the `start:stop` range are affe
 are identical (checked with `===`). Otherwise, if two columns share some part of
 memory but are not identical (e.g. are different views of the same parent
 vector) then `reverse!` result might be incorrect.
+
+`reverse!` keeps metadata.
 
 # Examples
 
@@ -2616,6 +2662,8 @@ or permutation `p` are identical (checked with `===`). Otherwise, if two columns
 some part of memory but are not identical (e.g. are different views of the same parent
 vector) then `permute!` result might be incorrect.
 
+`permute!` retains metadata.
+
 # Examples
 julia> df = DataFrame(a=1:5, b=6:10, c=11:15)
 5×3 DataFrame
@@ -2651,6 +2699,8 @@ Like [`permute!`](@ref), but the inverse of the given permutation is applied.
 frame or permutation `p` are identical (checked with `===`). Otherwise, if two
 columns share some part of memory but are not identical (e.g. are different views
 of the same parent vector) then `invpermute!` result might be incorrect.
+
+`invpermute!` retains metadata.
 
 # Examples
 
@@ -2696,6 +2746,8 @@ Base.invpermute!(df::AbstractDataFrame, p::AbstractVector{<:Integer}) =
 Return a copy of `df` with randomly permuted rows.
 The optional `rng` argument specifies a random number generator.
 
+`shuffle` propagates metadata.
+
 # Examples
 
 julia> rng = MersenneTwister(1234);
@@ -2726,6 +2778,8 @@ The optional `rng` argument specifies a random number generator.
 are identical (checked with `===`). Otherwise, if two columns share some part of
 memory but are not identical (e.g. are different views of the same parent
 vector) then `shuffle!` result might be incorrect.
+
+`shuffle!` retains metadata.
 
 # Examples
 
@@ -2794,6 +2848,8 @@ function and return the newly created data frame.
 
 $INSERTCOLS_ARGUMENTS
 
+`insertcols` propagates metadata.
+
 See also [`insertcols!`](@ref).
 
 # Examples
@@ -2847,6 +2903,8 @@ insertcols(df::AbstractDataFrame, args...;
 Insert a column into a data frame in place. Return the updated data frame.
 
 $INSERTCOLS_ARGUMENTS
+
+`insertcols!` retains metadata.
 
 See also [`insertcols`](@ref).
 

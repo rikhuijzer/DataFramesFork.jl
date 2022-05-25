@@ -903,6 +903,9 @@ $TRANSFORMATION_COMMON_RULES
 - `ungroup::Bool=true` : whether the return value of the operation on `gd` should be a data
   frame or a `GroupedDataFrame`.
 
+Column metadata is propagated for `DataFrame` argument only if passed operation
+is a single column selection only. Table metadata is not changed.
+
 See [`select`](@ref) for examples.
 """
 select!(df::DataFrame, @nospecialize(args...); renamecols::Bool=true) =
@@ -936,6 +939,9 @@ $TRANSFORMATION_COMMON_RULES
   column names should include the name of transformation functions or not.
 - `ungroup::Bool=true` : whether the return value of the operation on `gd` should be a data
   frame or a `GroupedDataFrame`.
+
+Column metadata is propagated for `DataFrame` argument only if passed operation
+is a single column selection only. Table metadata is not changed.
 
 See [`select`](@ref) for examples.
 """
@@ -973,6 +979,9 @@ $TRANSFORMATION_COMMON_RULES
   data frame.
 - `ungroup::Bool=true` : whether the return value of the operation on `gd` should be a data
   frame or a `GroupedDataFrame`.
+
+Column and table metadata is propagated for `DataFrame` argument only if passed operation
+is a single column selection only.
 
 # Examples
 ```jldoctest
@@ -1291,6 +1300,9 @@ julia> transform(gdf, x -> (x=10,), keepkeys=true)
 ERROR: ArgumentError: column :x in returned data frame is not equal to grouping key :x
 ```
 
+Column and table metadata is propagated for `DataFrame` argument only if passed operation
+is a single column selection only.
+
 See [`select`](@ref) for more examples.
 """
 transform(df::AbstractDataFrame, @nospecialize(args...); copycols::Bool=true, renamecols::Bool=true) =
@@ -1324,6 +1336,9 @@ $TRANSFORMATION_COMMON_RULES
   data frame.
 - `ungroup::Bool=true` : whether the return value of the operation on `gd` should be a data
   frame or a `GroupedDataFrame`.
+
+Column and table metadata is propagated for `DataFrame` argument only if passed operation
+is a single column selection only.
 
 # Examples
 ```jldoctest
@@ -1725,9 +1740,12 @@ function manipulate(dfv::SubDataFrame, @nospecialize(args...); copycols::Bool, k
     end
 end
 
-manipulate(df::DataFrame, args::AbstractVector{Int}; copycols::Bool, keeprows::Bool,
-           renamecols::Bool) =
-    DataFrame(_columns(df)[args], Index(_names(df)[args]), copycols=copycols)
+function manipulate(df::DataFrame, args::AbstractVector{Int}; copycols::Bool, keeprows::Bool,
+           renamecols::Bool)
+    new_df = DataFrame(_columns(df)[args], Index(_names(df)[args]), copycols=copycols)
+    _merge_metadata!(new_df, df)
+    return new_df
+end
 
 function manipulate(df::DataFrame, c::MultiColumnIndex; copycols::Bool, keeprows::Bool,
                     renamecols::Bool)

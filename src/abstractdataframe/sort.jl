@@ -613,6 +613,8 @@ are identical (checked with `===`). Otherwise, if two columns share some part of
 memory but are not identical (e.g. are different views of the same parent
 vector) then `sort!` result might be incorrect.
 
+`sort!` retains metadata.
+
 # Examples
 ```jldoctest
 julia> df = DataFrame(x=[3, 1, 2, 1], y=["b", "c", "a", "b"])

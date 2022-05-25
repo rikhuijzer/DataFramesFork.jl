@@ -621,6 +621,8 @@ function insert_single_column!(df::DataFrame, v::AbstractVector, col_ind::Column
     if haskey(index(df), col_ind)
         j = index(df)[col_ind]
         _columns(df)[j] = dv
+        # drop metadata if replacing a column
+        hasmetadata(df, j) === true && empty!(metadata(df, j))
     else
         if col_ind isa SymbolOrString
             push!(index(df), Symbol(col_ind))
@@ -733,6 +735,11 @@ for T in MULTICOLUMNINDEX_TUPLE
         for (j, col) in enumerate(idxs)
             # make sure we make a copy on assignment
             df[!, col] = new_df[:, j]
+            # copy column metadata from source to target data frame
+            if hasmetadata(new_df, j) == true
+                meta = empty!(metadata(df, col))
+                merge!(meta, metadata(new_df, j))
+            end
         end
         return df
     end
@@ -753,6 +760,10 @@ for T1 in (:AbstractVector, :Not, :Colon, :(typeof(!))),
         end
         for (j, col) in enumerate(idxs)
             df[row_inds, col] = (row_inds === !) ? mx[:, j] : view(mx, :, j)
+            # drop column metadata if columns are replaced
+            if row_ind isa typeof(!)
+                hasmetadata(df, col) === true && empty!(metadata(df, col))
+            end
         end
         return df
     end
@@ -876,6 +887,20 @@ function hcat!(df1::DataFrame, df2::AbstractDataFrame;
     u = add_names(index(df1), index(df2), makeunique=makeunique)
     for i in 1:length(u)
         df1[!, u[i]] = copycols ? df2[:, i] : df2[!, i]
+        if hasmetadata(df2, i) === true
+            merge!(metadata(df1, u[i]), metadata(df2, i))
+        end
+    end
+    if hasmetadata(df2) === true
+        meta_df1 = metadata(df1)
+        for (k, v) in metadata(df2)
+            # drop duplicate metadata
+            if k in meta_df1
+                delete!(meta_df1, k)
+            else
+                meta_df1[k] = v
+            end
+        end
     end
     return df1
 end
@@ -1043,6 +1068,8 @@ The above rule has the following exceptions:
 
 Please note that `append!` must not be used on a `DataFrame` that contains
 columns that are aliases (equal when compared with `===`).
+
+Metadata of the appended object is not propagated to target `df` data frame.
 
 # See also
 
@@ -1385,6 +1412,8 @@ and order.
 Please note that `push!` must not be used on a `DataFrame` that contains columns
 that are aliases (equal when compared with `===`).
 
+Metadata of the appended object is not propagated to target `df` data frame.
+
 # Examples
 ```jldoctest
 julia> df = DataFrame(A=1:3, B=1:3);
@@ -1578,6 +1607,17 @@ function _replace_columns!(df::DataFrame, newdf::DataFrame)
     copy!(_columns(df), _columns(newdf))
     copy!(_names(index(df)), _names(newdf))
     copy!(index(df).lookup, index(newdf).lookup)
+
+    old_df_colmetadata = getfield(df, :colmetadata)
+    if old_df_colmetadata !== nothing
+        empty!(old_df_colmetadata)
+    end
+    for i in 1:nrow(df)
+        if hasmetadata(newdf, i) === true
+            metadata(df, i) = copy(metadata(newdf, i))
+        end
+    end
+
     return df
 end
 

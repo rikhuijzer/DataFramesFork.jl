@@ -359,6 +359,8 @@ Return a `DataFrame` where each column of `df` is transformed using function `f`
 Note that `mapcols` guarantees not to reuse the columns from `df` in the returned
 `DataFrame`. If `f` returns its argument then it gets copied before being stored.
 
+`mapcols` propagates metadata.
+
 # Examples
 ```jldoctest
 julia> df = DataFrame(x=1:4, y=11:14)
@@ -403,7 +405,9 @@ function mapcols(f::Union{Function, Type}, df::AbstractDataFrame)
             push!(vs, [fv])
         end
     end
-    return DataFrame(vs, _names(df), copycols=false)
+    new_df = DataFrame(vs, _names(df), copycols=false)
+    _merge_metadata!(new_df, df)
+    return new_df
 end
 
 """
@@ -414,6 +418,8 @@ Update a `DataFrame` in-place where each column of `df` is transformed using fun
 (all values other than `AbstractVector` are considered to be a scalar).
 
 Note that `mapcols!` reuses the columns from `df` if they are returned by `f`.
+
+`mapcols!` retains metadata.
 
 # Examples
 ```jldoctest

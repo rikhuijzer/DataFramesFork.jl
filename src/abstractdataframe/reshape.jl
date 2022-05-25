@@ -39,6 +39,7 @@ that return views into the original data frame.
   as long as it supports conversion from `String`.
   When `view=true`, a `RepeatedVector{T}` is produced.
 
+`stack` drops metadata.
 
 # Examples
 ```jldoctest
@@ -244,6 +245,8 @@ Row and column keys will be ordered in the order of their first appearance.
   default is `missing`. If the `value` column is a `CategoricalVector` and
   `fill` is not `missing` then in order to keep unstacked value columns also
   `CategoricalVector` the `fill` must be passed as `CategoricalValue`
+
+`unstack` drops metadata.
 
 # Examples
 
@@ -674,6 +677,8 @@ based on the result of `promote_type`.
 That is, if the source data frame contains `Int` and `Float64` columns,
 resulting columns will have element type `Float64`. If the source has
 `Int` and `String` columns, resulting columns will have element type `Any`.
+
+`permutedims` drops metadata.
 
 # Examples
 
