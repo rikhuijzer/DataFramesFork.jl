@@ -350,7 +350,7 @@ metadata(dfc::DataFrameColumns, col::ColumnIndex) = metadata(parent(dfc), col)
 hasmetadata(dfc::DataFrameColumns, col::ColumnIndex) = hasmetadata(parent(dfc), col)
 
 """
-    mapcols(f::Union{Function, Type}, df::AbstractDataFrame)
+    mapcols(f::Union{Function, Type}, df::AbstractDataFrame; keepmetadata::Bool=false)
 
 Return a `DataFrame` where each column of `df` is transformed using function `f`.
 `f` must return `AbstractVector` objects all with the same length or scalars
@@ -359,7 +359,7 @@ Return a `DataFrame` where each column of `df` is transformed using function `f`
 Note that `mapcols` guarantees not to reuse the columns from `df` in the returned
 `DataFrame`. If `f` returns its argument then it gets copied before being stored.
 
-`mapcols` propagates metadata.
+`mapcols` does not propagate matadata by default unless `keepmetadata=true` is passed.
 
 # Examples
 ```jldoctest
@@ -384,7 +384,7 @@ julia> mapcols(x -> x.^2, df)
    4 │    16    196
 ```
 """
-function mapcols(f::Union{Function, Type}, df::AbstractDataFrame)
+function mapcols(f::Union{Function, Type}, df::AbstractDataFrame; keepmetadata::Bool=false)
     # note: `f` must return a consistent length
     vs = AbstractVector[]
     seenscalar = false
@@ -405,13 +405,14 @@ function mapcols(f::Union{Function, Type}, df::AbstractDataFrame)
             push!(vs, [fv])
         end
     end
+
     new_df = DataFrame(vs, _names(df), copycols=false)
-    _merge_metadata!(new_df, df)
+    keepmetadata && _merge_metadata!(new_df, df)
     return new_df
 end
 
 """
-    mapcols!(f::Union{Function, Type}, df::DataFrame)
+    mapcols!(f::Union{Function, Type}, df::DataFrame; keepmetadata::Bool=false)
 
 Update a `DataFrame` in-place where each column of `df` is transformed using function `f`.
 `f` must return `AbstractVector` objects all with the same length or scalars
@@ -419,7 +420,7 @@ Update a `DataFrame` in-place where each column of `df` is transformed using fun
 
 Note that `mapcols!` reuses the columns from `df` if they are returned by `f`.
 
-`mapcols!` retains metadata.
+`mapcols!` drops matadata by default unless `keepmetadata=true` is passed.
 
 # Examples
 ```jldoctest
@@ -446,7 +447,7 @@ julia> df
    4 │    16    196
 ```
 """
-function mapcols!(f::Union{Function, Type}, df::DataFrame)
+function mapcols!(f::Union{Function, Type}, df::DataFrame; keepmetadata::Bool=false)
     # note: `f` must return a consistent length
     ncol(df) == 0 && return df # skip if no columns
 
@@ -483,6 +484,11 @@ function mapcols!(f::Union{Function, Type}, df::DataFrame)
     raw_columns = _columns(df)
     for i in 1:ncol(df)
         raw_columns[i] = vs[i]
+    end
+
+    if !keepmetadata
+        setproperty!(df, :metadata, nothing)
+        setproperty!(df, :colmetadata, nothing)
     end
 
     return df

@@ -428,3 +428,8 @@ function _merge_metadata!(dst::DataFrame, src)
         end
     end
 end
+
+function _drop_metadata!(df::DataFrame)
+    setfield!(df, :metadata, nothing)
+    setfield!(df, :colmetadata, nothing)
+end

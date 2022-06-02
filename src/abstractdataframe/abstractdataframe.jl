@@ -1613,7 +1613,10 @@ function fillcombinations(df::AbstractDataFrame, indexcols;
     end
 
     # keep only columns from the source in their original order
-    return select!(out_df, _names(df))
+    select!(out_df, _names(df))
+    _drop_metadata!(out_df)
+    _merge_metadata!(out_df, df)
+    return out_df
 end
 
 """
@@ -2090,7 +2093,8 @@ julia> repeat(df, inner=2, outer=3)
 function Base.repeat(df::AbstractDataFrame; inner::Integer=1, outer::Integer=1)
     inner < 0 && throw(ArgumentError("inner keyword argument must be non-negative"))
     outer < 0 && throw(ArgumentError("outer keyword argument must be non-negative"))
-    return mapcols(x -> repeat(x, inner = Int(inner), outer = Int(outer)), df)
+    return mapcols(x -> repeat(x, inner = Int(inner), outer = Int(outer)), df,
+                   keepmetadata=true)
 end
 
 """
@@ -2124,7 +2128,7 @@ julia> repeat(df, 2)
 """
 function Base.repeat(df::AbstractDataFrame, count::Integer)
     count < 0 && throw(ArgumentError("count must be non-negative"))
-    return mapcols(x -> repeat(x, Int(count)), df)
+    return mapcols(x -> repeat(x, Int(count)), df, keepmetadata=true)
 end
 
 ##############################################################################
@@ -2329,7 +2333,8 @@ returned `DataFrame` will affect `df`.
 
 `cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
 
-`flatten` propagates metadata.
+`flatten` propagates metadata, except for flattened columns for which column
+ metadata is dropped.
 
 # Examples
 
@@ -2425,6 +2430,10 @@ function flatten(df::AbstractDataFrame,
     end
 
     _merge_metadata!(new_df, df)
+    for i in idxcols
+        hasmetadata(new_df, i) && empty!(metadata(new_df, i))
+    end
+
     return new_df
 end
 
@@ -2492,7 +2501,7 @@ julia> reverse(df, 2, 3)
 ```
 """
 Base.reverse(df::AbstractDataFrame, start::Integer=1, stop::Integer=nrow(df)) =
-    mapcols(x -> reverse(x, start, stop), df)
+    mapcols(x -> reverse(x, start, stop), df, keepmetadata=true)
 
 """
     reverse!(df::AbstractDataFrame, start=1, stop=nrow(df))
@@ -3092,7 +3101,7 @@ function insertcols!(df::AbstractDataFrame, col::Int=ncol(df)+1; makeunique::Boo
     end
     if !isempty(name_cols)
         # an explicit error is thrown as keyword argument was supported in the past
-        throw(ArgumentError("inserting colums using a keyword argument is not supported, " *
+        throw(ArgumentError("inserting columns using a keyword argument is not supported, " *
                             "pass a Pair as a positional argument instead"))
     end
     return df
