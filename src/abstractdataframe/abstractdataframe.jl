@@ -151,8 +151,7 @@ a vector) then:
 
 Mixing symbols and strings in `to` and `from` is not allowed.
 
-Rename operations do not affect metadata. Metadata attached to column number
-`i` remains attached to the same column number after operation.
+`rename!` does not affect table metadata. Column metadata is dropped.
 
 See also: [`rename`](@ref)
 
@@ -200,17 +199,20 @@ julia> rename!(uppercase, df)
 function rename!(df::AbstractDataFrame, vals::AbstractVector{Symbol};
                  makeunique::Bool=false)
     rename!(index(df), vals, makeunique=makeunique)
+    _drop_colmetadata!(df)
     return df
 end
 
 function rename!(df::AbstractDataFrame, vals::AbstractVector{<:AbstractString};
                  makeunique::Bool=false)
     rename!(index(df), Symbol.(vals), makeunique=makeunique)
+    _drop_colmetadata!(df)
     return df
 end
 
 function rename!(df::AbstractDataFrame, args::AbstractVector{Pair{Symbol, Symbol}})
     rename!(index(df), args)
+    _drop_colmetadata!(df)
     return df
 end
 
@@ -223,6 +225,7 @@ function rename!(df::AbstractDataFrame,
                              AbstractDict{<:AbstractString, Symbol},
                              AbstractDict{<:AbstractString, <:AbstractString}})
     rename!(index(df), [Symbol(from) => Symbol(to) for (from, to) in args])
+    _drop_colmetadata!(df)
     return df
 end
 
@@ -232,6 +235,7 @@ function rename!(df::AbstractDataFrame,
                              AbstractDict{<:Integer, <:AbstractString},
                              AbstractDict{<:Integer, Symbol}})
     rename!(index(df), [_names(df)[from] => Symbol(to) for (from, to) in args])
+    _drop_colmetadata!(df)
     return df
 end
 
@@ -239,6 +243,7 @@ rename!(df::AbstractDataFrame, args::Pair...) = rename!(df, collect(args))
 
 function rename!(f::Function, df::AbstractDataFrame)
     rename!(f, index(df))
+    _drop_colmetadata!(df)
     return df
 end
 
@@ -401,8 +406,6 @@ Base.propertynames(df::AbstractDataFrame, private::Bool=false) = copy(_names(df)
 Create a new `DataFrame` with the same column names and column element types
 as `df`. An optional second argument can be provided to request a number of rows
 that is different than the number of rows present in `df`.
-
-Similar does not propagate metadata.
 """
 function Base.similar(df::AbstractDataFrame, rows::Integer = size(df, 1))
     rows < 0 && throw(ArgumentError("the number of rows must be non-negative"))

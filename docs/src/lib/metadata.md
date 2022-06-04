@@ -6,7 +6,8 @@ DataFrames.jl allows you to store and retrieve metadata on table and column
 level. This is supported using the functions defined by DataAPI.jl interface:
 `hasmetadata`, `hascolmetadata`, `metadata` and `colmetadata`.
 These functions work with `DataFrame`, `SubDataFrame`, `DataFrameRow`,
-`GroupedDataFrame`, `DataFrameRows`, and `DataFrameColumns` objects.
+`GroupedDataFrame`, `DataFrameRows`, and `DataFrameColumns` objects. In this
+section collectively these objects will be called *data frame like*.
 
 Assume that we work with a data frame `df` that has a column `:col`.
 
@@ -149,24 +150,25 @@ data frames.
     Such changes might be made based on users' feedback about what metadata
     propagation rules are most convenient in practice.
 
-The general design rules for propagation of table and column level metadata
-are as follows:
-* if some object (data frame or column) is mutated in-place its metadata
-  is not changed.
-* preferably (this is not guaranteed in all cases as sometimes it might be hard
-  to detect that this condition is met) if some object is moved as a whole
-  (either by coping or by aliasing) then its metadata is propagated.
-* in all other cases if a new object is allocated from an existing object and
-  this transformation is not a copy or aliasing then metadata is dropped.
+The general design rules for propagation of table metadata is as follows:
+* for all operations that take a single data frame like object
+  and return a data frame like object table level metadata is preserved;
+* for all operations that take more than one data frame like object
+  and return a data frame like object (e.g. `hcat` or joins) table level metadata
+  is preserved from all tables with the exception that if two or more tables
+  define the same metadata then it is silently dropped.
 
-The rationale behind these rules is that metadata can be arbitrary information
-about the object and any change of the object that the metadata is attached to
-might invalidate it.
+The general design rules for propagation of column metadata is as follows:
+* if the column values are not changed in the operation and column name is not
+  changed then column metadata is retained;
+* when renaming columns using `rename!` and `rename` column metadata is
+  retained (it is considered to be attached to column value).
+* when column values are subsetted or repeated (like in `getindex`, `filter`,
+  `subset`, or joins) then column metadata is retained.
 
-The concrete rules described below are derived from the general principles
-explained above by DataFrames.jl.
+The concrete functions listed below follow these general principles.
 
-TODO: the list above is not finished yet, but show the intention
+TODO: the list below is not finished do not read it yet
 
 ### Operations that preserve table-level metadata
 
@@ -175,6 +177,7 @@ TODO: the list above is not finished yet, but show the intention
 * `insertcols!`
 * `invpermute!`
 * `permute!`
+* `rename!`
 * `reverse!`
 * `setindex!`
 * `shuffle!`

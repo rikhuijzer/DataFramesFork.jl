@@ -31,7 +31,6 @@ makedocs(
             "Sorting" => "man/sorting.md",
             "Categorical Data" => "man/categorical.md",
             "Missing Data" => "man/missing.md",
-            "Metadata" => "man/metadata.md",
             "Data manipulation frameworks" => "man/querying_frameworks.md",
             "Comparison with Python/R/Stata" => "man/comparisons.md"
         ],
@@ -39,6 +38,7 @@ makedocs(
             "Types" => "lib/types.md",
             "Functions" => "lib/functions.md",
             "Indexing" => "lib/indexing.md",
+            "Metadata" => "man/metadata.md",
             hide("Internals" => "lib/internals.md"),
         ]
     ],

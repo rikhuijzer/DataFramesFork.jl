@@ -418,18 +418,20 @@ function _findall(B::BitVector)::Union{UnitRange{Int}, Vector{Int}}
     @assert false "should not be reached"
 end
 
-function _merge_metadata!(dst::DataFrame, src)
-    if hasmetadata(src) === true
-        merge!(metadata(dst), metadata(src))
-    end
-    for n in _names(dst)
-        if hasmetadata(src, n) === true
-            merge!(metadata(dst, n), metadata(src, n))
-        end
-    end
-end
-
 function _drop_metadata!(df::DataFrame)
     setfield!(df, :metadata, nothing)
+end
+
+function _drop_colmetadata!(df::DataFrame)
     setfield!(df, :colmetadata, nothing)
+end
+
+function _drop_metadata!(obj::Union{DataFrameRow, SubDataFrame, DataFrameRows,
+                                    DataFrameColumns, GroupedDataFrame})
+    setfield!(parent(obj), :metadata, nothing)
+end
+
+function _drop_colmetadata!(obj::::Union{DataFrameRow, SubDataFrame, DataFrameRows,
+                                         DataFrameColumns, GroupedDataFrame})
+    setfield!(parent(obj), :colmetadata, nothing)
 end
