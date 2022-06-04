@@ -17,11 +17,11 @@ If `false` is returned this means that data frame `df` does not have any table
 level metadata defined. If `true` is returned it means that at table level some
 metadata is defined for `df`.
 
-Although `hasmetadata` is guaranteed to return `Bool` value in DataFrames.jl
-it is recommended to check its return value against `true` and `false` explicitly
-using the `===` operator. The reason is that, in generic code, `hasmetadata`
-is also allowed to return `nothing` if the queried object does not support
-attaching metadata.
+Although `hasmetadata` is guaranteed to return `Bool` value in DataFrames.jl in
+generic code it is recommended to check its return value against `true` and
+`false` explicitly using the `===` operator. The reason is that, in code
+accepting any Tables.jl table, `hasmetadata` is also allowed to return `nothing`
+if the queried object does not support attaching metadata.
 
 ### Contract for `hascolmetadata`
 
@@ -32,10 +32,10 @@ have any column level metadata defined. If `true` is returned it means that for
 `:col` column some metadata is defined.
 
 Although `hascolmetadata` is guaranteed to return `Bool` value in DataFrames.jl
-it is recommended to check its return value against `true` and `false` explicitly
-using the `===` operator. The reason is that, in generic code, `hascolmetadata`
-is also allowed to return `nothing` if the queried object does not support
-attaching metadata.
+in generic code it is recommended to check its return value against `true` and
+`false` explicitly using the `===` operator. The reason is that, in code
+accepting any Tables.jl table, `hascolmetadata` is also allowed to return
+`nothing` if the queried object does not support attaching metadata to a column.
 
 ### Contract for `metadata`
 
@@ -56,23 +56,38 @@ It is recommended to use strings as values of the metadata. The reason
 is that some storage formats, like for example Apache Arrow, only support
 storing string data as metadata values.
 
-The `hasmetadata`, `hascolmetadata`, `metadata` and `colmetadata` functions
-called on objects defined in DataFrames.jl are not thread safe and should not be
-used in multi-threaded code. In particular, as an implementation detail, the
-first time `metadata` is called on a data frame object, it will mutate it (this
-might change in the future versions of DataFrames.jl).
+The `metadata` and `colmetadata` functions called on objects defined in
+DataFrames.jl are not thread safe and should not be used in multi-threaded code.
+In particular, as an implementation detail, the first time `metadata` is called
+on a data frame object that previously did not have any metadata stored, it will
+mutate it (this might change in the future versions of DataFrames.jl).
 
-In generic code it is recommended to run `hasmetadata` check before calling
-`metadata` function. The reason is, that if some object does not support
-metadata the call to `metadata` function throws an error. A similar rule
-applies to calling `hascolmetadata` before calling `colmetadata`.
+When working interactively with DataFrames.jl you can safely just rely on the
+`metadata` and `colmetadata` functions. This will create a minimal overhead
+in case some data frame does not have metadata yet, but it should not be
+noticeable in typical usage scenarios.
+
+In generic code or code that is performance critical it is recommended to run
+`hasmetadata` check before calling `metadata` function (the same considerations
+apply to `hascolmetadata` and `colmetadata`). There are two reasons for this:
+
+* if some Tables.jl table (other than data frame) does not support metadata the
+  call to `metadata` function throws an error. A similar rule applies to calling
+  `hascolmetadata` before calling `colmetadata`.
+* if you know you query a data frame, using the `hasmetadata` function avoids
+  creation of metadata dictionary in a data frame in case it were not needed.
+  A call to `metadata` will create such a dictionary when it was not present
+  in a data frame yet.
 
 ## Examples
 
 Here is a simple example how you can work with metadata in DataFrames.jl:
 
 ```jldoctest dataframe
-julia> df = DataFame(name="Jan Krzysztof Duda", date=, rating=)
+julia> df = DataFame(name=["Jan Krzysztof Duda", "Jan Krzysztof Duda",
+                           "Radosław Wojtaszek", "Radosław Wojtaszek"],
+                     date=["2022-Jun", "2021-Jun", "2022-Jun", "2021-Jun"],
+                     rating=[2750, 2729, 2708, 2687])
 
 julia> hasmetadata(df)
 
@@ -94,11 +109,17 @@ julia> hasmetadata(df, :rating)
 
 julia> rating_meta = metadata(df, :rating)
 
-julia> rating_meta["name"] = "ELO rating in classical time"
+julia> rating_meta["name"] = "First and last name of a player"
+
+julia> rating_meta["rating"] = "ELO rating in classical time control"
+
+julia> rating_meta["date"] = "Rating date in yyyy-u format for \"english\" locale"
 
 julia> hasmetadata(df, :rating)
 
 julia> metadata(df, :rating)
+
+julia> metadata.(Ref(df), names(df))
 
 julia> empty!(rating_meta)
 
@@ -106,6 +127,14 @@ julia> hasmetadata(df, :rating)
 
 julia> metadata(df, :rating)
 ```
+
+As a practical tip if you have metadata attached to some object
+(either data frame or data frame column) and you want to propagate it to
+some new object you can use:
+* `copy!` to fully overwrite destination object metadata with source object
+  metadata;
+* `merge!` to add destination object metadata with source object metadata
+  (overwriting duplicates).
 
 ## Propagation of metadata
 
@@ -120,16 +149,24 @@ data frames.
     Such changes might be made based on users' feedback about what metadata
     propagation rules are most convenient in practice.
 
-Two general design rules for propagation of table and column level metadata
+The general design rules for propagation of table and column level metadata
 are as follows:
 * if some object (data frame or column) is mutated in-place its metadata
   is not changed.
-* if some object is moved as a whole (either by coping or by aliasing)
-  then its metadata is propagated.
-* in all other cases if a new object is created from an existing object and
+* preferably (this is not guaranteed in all cases as sometimes it might be hard
+  to detect that this condition is met) if some object is moved as a whole
+  (either by coping or by aliasing) then its metadata is propagated.
+* in all other cases if a new object is allocated from an existing object and
   this transformation is not a copy or aliasing then metadata is dropped.
 
-Here are the rules that currently are followed by DataFrames.jl.
+The rationale behind these rules is that metadata can be arbitrary information
+about the object and any change of the object that the metadata is attached to
+might invalidate it.
+
+The concrete rules described below are derived from the general principles
+explained above by DataFrames.jl.
+
+TODO: the list above is not finished yet, but show the intention
 
 ### Operations that preserve table-level metadata
 
@@ -151,7 +188,7 @@ Here are the rules that currently are followed by DataFrames.jl.
 
 ### Operations that preserve column-level metadata
 
-* `select!` and `transform!` if a single operation is passed  selector
+* `select!` and `transform!` if a single operation is passed selector
   that selects one or multiple columns
 * `leftjoin!` for the left table columns
 * `insertcols!` for existing columns
@@ -162,8 +199,8 @@ Here are the rules that currently are followed by DataFrames.jl.
 ### Operations that propagate column-level metadata
 
 * `copy`
-* `getindex` with `!` or `:` as row selector
-* `select`, `transform`, and `combine` if a single operation is passed  selector
+* `getindex` with `!` or `:` as row selector and multicolumn selector
+* `select`, `transform`, and `combine` if a single operation is passed selector
   that selects one or multiple columns
 * `DataFrame`
 * `hcat`
