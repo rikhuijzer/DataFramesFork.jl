@@ -161,7 +161,8 @@ The general design rules for propagation of table metadata is as follows:
 The general design rules for propagation of column metadata is as follows:
 * if the column values are not changed in the operation and column name is not
   changed then column metadata is retained;
-* when renaming columns using `rename!` and `rename` column metadata is
+* when renaming columns using `rename!` and `rename` or automatic column
+  renaming is done (like in joins or `hcat`) column metadata is
   retained (it is considered to be attached to column value).
 * when column values are subsetted or repeated (like in `getindex`, `filter`,
   `subset`, or joins) then column metadata is retained.
