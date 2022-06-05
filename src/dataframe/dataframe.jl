@@ -1738,5 +1738,5 @@ end
 function hasmetadata(df::DataFrame, col::ColumnIndex)
     idx = index(df)[col]
     meta = getfield(df, :colmetadata)
-    return meta !== nothing && haskey(meta, idx)
+    return meta !== nothing && haskey(meta, idx) && !isempty(meta[idx])
 end

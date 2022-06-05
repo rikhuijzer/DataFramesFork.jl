@@ -420,18 +420,36 @@ end
 
 function _drop_metadata!(df::DataFrame)
     setfield!(df, :metadata, nothing)
+    return nothing
 end
 
 function _drop_colmetadata!(df::DataFrame)
     setfield!(df, :colmetadata, nothing)
+    return nothing
 end
 
-function _drop_metadata!(obj::Union{DataFrameRow, SubDataFrame, DataFrameRows,
-                                    DataFrameColumns, GroupedDataFrame})
-    setfield!(parent(obj), :metadata, nothing)
+function _drop_colmetadata!(df::DataFrame, col::ColumnIndex)
+    if hasmetadata(df, col)
+        empty!(metadata(df, col))
+    end
+    return nothing
 end
 
-function _drop_colmetadata!(obj::::Union{DataFrameRow, SubDataFrame, DataFrameRows,
-                                         DataFrameColumns, GroupedDataFrame})
-    setfield!(parent(obj), :colmetadata, nothing)
+function _copy_metadata!(dst::DataFrame, src)
+    if hasmetadata(src) === true
+        copy!(metadata(dst), metadata(src))
+    else
+        _drop_metadata!(df)
+    end
+    return nothing
+end
+
+function _copy_colmetadata!(dst::DataFrame, dstcol::ColumnIndex,
+                            src, srccol::ColumnIndex)
+    if hascolmetadata(src, srccol) === true
+        copy!(metadata(dst, dstcol), metadata(src, srccol))
+    else
+        _drop_colmetadata!(dst, col)
+    end
+    return nothing
 end

@@ -160,15 +160,21 @@ The general design rules for propagation of table metadata is as follows:
   value of metadata for this key is the same).
 
 The general design rules for propagation of column metadata is as follows:
-* if the column values are not changed in the operation and column name is not
-  changed then column metadata is retained;
+* when column values are unchanged, are subsetted or are repeated and column
+  name is not changed (like in `getindex`, `filter`, `subset`, or joins) then
+  column metadata is retained; in the context of operation specification
+  minilanguage (used in `select` and related functions) this condition is
+  considered to be only met if the column in the target data frame is taken from
+  the source data frame using single column selector like `:col` or multi-column
+  selector like `[:col1, :col2]` (so operations like
+  `:col => (x -> identity(x) => :col` do not propagate metadata although they do
+  not change the data, but it is impossible to verify in general statically
+  that this is the case).
 * when renaming columns using
   (a) the `rename!` or `rename` functions,
   (b) `:x => :y` or `:x => identity => :y` operation specification, or
   (c) automatic column renaming (like in joins or `hcat`) column metadata is
   retained (it is considered to be attached to column value).
-* when column values are subsetted or repeated (like in `getindex`, `filter`,
-  `subset`, or joins) then column metadata is retained.
 
 The concrete functions listed below follow these general principles.
 

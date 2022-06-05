@@ -350,7 +350,7 @@ metadata(dfc::DataFrameColumns, col::ColumnIndex) = metadata(parent(dfc), col)
 hasmetadata(dfc::DataFrameColumns, col::ColumnIndex) = hasmetadata(parent(dfc), col)
 
 """
-    mapcols(f::Union{Function, Type}, df::AbstractDataFrame; keepmetadata::Bool=false)
+    mapcols(f::Union{Function, Type}, df::AbstractDataFrame)
 
 Return a `DataFrame` where each column of `df` is transformed using function `f`.
 `f` must return `AbstractVector` objects all with the same length or scalars
@@ -359,7 +359,8 @@ Return a `DataFrame` where each column of `df` is transformed using function `f`
 Note that `mapcols` guarantees not to reuse the columns from `df` in the returned
 `DataFrame`. If `f` returns its argument then it gets copied before being stored.
 
-`mapcols` does not propagate matadata by default unless `keepmetadata=true` is passed.
+`mapcols` propagates table metadata and
+propagates column metadata if the column is not changed by `f`.
 
 # Examples
 ```jldoctest
@@ -384,7 +385,7 @@ julia> mapcols(x -> x.^2, df)
    4 │    16    196
 ```
 """
-function mapcols(f::Union{Function, Type}, df::AbstractDataFrame; keepmetadata::Bool=false)
+function mapcols(f::Union{Function, Type}, df::AbstractDataFrame)
     # note: `f` must return a consistent length
     vs = AbstractVector[]
     seenscalar = false
@@ -407,12 +408,26 @@ function mapcols(f::Union{Function, Type}, df::AbstractDataFrame; keepmetadata::
     end
 
     new_df = DataFrame(vs, _names(df), copycols=false)
-    keepmetadata && _merge_metadata!(new_df, df)
+
+    _copy_metadata!(new_df, df)
+
+    # in DataFrames.jl parent always returns source DataFrame
+    if getfield(parent(df), :colmetadata) !== nothing
+        for (rci, vsi) in zip(eachcol(new_df), eachcol(df))
+            # this rule also covers the case when df is a SubDataFrame
+            # in which case its rows maybe a subset of its parent's rows
+            # but in when subsetting rows we propagate metadata
+            if hascolmetadata(df, i) && isequal(rci, vsi)
+                _copy_colmetadata!(new_df, i, df, i)
+            end
+        end
+    end
+
     return new_df
 end
 
 """
-    mapcols!(f::Union{Function, Type}, df::DataFrame; keepmetadata::Bool=false)
+    mapcols!(f::Union{Function, Type}, df::DataFrame)
 
 Update a `DataFrame` in-place where each column of `df` is transformed using function `f`.
 `f` must return `AbstractVector` objects all with the same length or scalars
@@ -420,7 +435,8 @@ Update a `DataFrame` in-place where each column of `df` is transformed using fun
 
 Note that `mapcols!` reuses the columns from `df` if they are returned by `f`.
 
-`mapcols!` drops matadata by default unless `keepmetadata=true` is passed.
+`mapcols` preserves table metadata and
+preserves column metadata if the column is not changed by `f`.
 
 # Examples
 ```jldoctest
@@ -483,12 +499,12 @@ function mapcols!(f::Union{Function, Type}, df::DataFrame; keepmetadata::Bool=fa
     @assert length(vs) == ncol(df)
     raw_columns = _columns(df)
     for i in 1:ncol(df)
-        raw_columns[i] = vs[i]
-    end
-
-    if !keepmetadata
-        setproperty!(df, :metadata, nothing)
-        setproperty!(df, :colmetadata, nothing)
+        rci = raw_columns[i]
+        vsi = vs[i]
+        if hascolmetadata(df, i) && !isequal(rci, vsi)
+            _drop_colmetadata!(df, i)
+        end
+        raw_columns[i] = vsi
     end
 
     return df
