@@ -153,16 +153,19 @@ data frames.
 The general design rules for propagation of table metadata is as follows:
 * for all operations that take a single data frame like object
   and return a data frame like object table level metadata is preserved;
-* for all operations that take more than one data frame like object
-  and return a data frame like object (e.g. `hcat` or joins) table level metadata
-  is preserved from all tables with the exception that if two or more tables
-  define the same metadata key with a different value then it is silently dropped.
+* for all operations that take more than one data frame like object and return a
+  data frame like object (e.g. `hcat` or joins) table level metadata is
+  preserved only if for some key for all passed tables there is the same value
+  of the metadata (e.g., for all tables there is a `"source"` key and the
+  value of metadata for this key is the same).
 
 The general design rules for propagation of column metadata is as follows:
 * if the column values are not changed in the operation and column name is not
   changed then column metadata is retained;
-* when renaming columns using `rename!` and `rename` or automatic column
-  renaming is done (like in joins or `hcat`) column metadata is
+* when renaming columns using
+  (a) the `rename!` or `rename` functions,
+  (b) `:x => :y` or `:x => identity => :y` operation specification, or
+  (c) automatic column renaming (like in joins or `hcat`) column metadata is
   retained (it is considered to be attached to column value).
 * when column values are subsetted or repeated (like in `getindex`, `filter`,
   `subset`, or joins) then column metadata is retained.
