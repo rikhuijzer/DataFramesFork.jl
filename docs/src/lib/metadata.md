@@ -156,7 +156,7 @@ The general design rules for propagation of table metadata is as follows:
 * for all operations that take more than one data frame like object
   and return a data frame like object (e.g. `hcat` or joins) table level metadata
   is preserved from all tables with the exception that if two or more tables
-  define the same metadata then it is silently dropped.
+  define the same metadata key with a different value then it is silently dropped.
 
 The general design rules for propagation of column metadata is as follows:
 * if the column values are not changed in the operation and column name is not
