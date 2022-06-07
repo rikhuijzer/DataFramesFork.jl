@@ -152,7 +152,9 @@ data frames.
 
 The general design rules for propagation of table metadata is as follows:
 * for all operations that take a single data frame like object
-  and return a data frame like object table level metadata is preserved;
+  and return a data frame like object table level metadata is propagated to the
+  returned data frame object; similarly operations that mutate a single data
+  frame object do not affect table level metadata;
 * for all operations that take more than one data frame like object and return a
   data frame like object (e.g. `hcat` or joins) table level metadata is
   preserved only if for some key for all passed tables there is the same value
@@ -160,16 +162,16 @@ The general design rules for propagation of table metadata is as follows:
   value of metadata for this key is the same).
 
 The general design rules for propagation of column metadata is as follows:
-* when column values are unchanged, are subsetted or are repeated and column
-  name is not changed (like in `getindex`, `filter`, `subset`, or joins) then
-  column metadata is retained; in the context of operation specification
-  minilanguage (used in `select` and related functions) this condition is
-  considered to be only met if the column in the target data frame is taken from
-  the source data frame using single column selector like `:col` or multi-column
-  selector like `[:col1, :col2]` (so operations like
+* when it is possible to determine statically that column values are unchanged,
+  are subsetted or are repeated and column name is not changed (like in
+  `getindex`, `filter`, `subset`, or joins) then column metadata is retained; in
+  the context of operation specification minilanguage (used in `select` and
+  related functions) this condition means that only using single column selector
+  like `:col`, or multi-column selector like `[:col1, :col2]`, or `identity` or
+  `copy` transformation propagates column metadata (but operations like
   `:col => (x -> identity(x) => :col` do not propagate metadata although they do
-  not change the data, but it is impossible to verify in general statically
-  that this is the case).
+  not change the data). Similarly in `mapcols`/`mapcols!` only `identity`
+  transformation preserves metadata;
 * when renaming columns using
   (a) the `rename!` or `rename` functions,
   (b) `:x => :y` or `:x => identity => :y` operation specification, or
