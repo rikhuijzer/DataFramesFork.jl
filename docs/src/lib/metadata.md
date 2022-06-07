@@ -182,9 +182,9 @@ The general design rules for propagation of column metadata is as follows:
 
 The concrete functions listed below follow these general principles.
 
-TODO: the list below is not finished do not read it yet
+### Operations that preserve metadata
 
-### Operations that preserve table and column level metadata
+TODO: the list below is not finished do not read it yet
 
 * `mapcols!` (column level only if passed function is `identity` or `copy`)
 * `rename!`
@@ -215,21 +215,12 @@ TODO: the list below is not finished do not read it yet
 * `shuffle!`
 * `insertcols` (column level metadata present for previously existing columns)
 * `insertcols!` (column level metadata present for previously existing columns)
+* `stack` (column level metadata is dropped)
+* `unstack` (column level metadata is dropped)
+* `permutedims` (column level metadata is dropped)
+* `sort`
+* `sort!`
+* `subset`
+* `subset!`
 
-
-* `setindex!`
-* `copy`
-* `getindex` with `!` or `:` as row selector and `:` as column selector
-* `DataFrame`
-* `select!` and `transform!` if a single operation is passed selector
-  that selects one or multiple columns
-* `leftjoin!` for the left table columns
-* `setindex!` for all columns that are not changed or if it is assigning data
-  frame to a data frame with all rows selected
-* broadcasted assignment for all columns that are not changed
-* `copy`
-* `getindex` with `!` or `:` as row selector and multicolumn selector
-* `select`, `transform`, and `combine` if a single operation is passed selector
-  that selects one or multiple columns
-* `DataFrame`
-* `hcat`
+TODO: `hcat`, `vcat`, `select[!]`, `transform[!]`, `combine`

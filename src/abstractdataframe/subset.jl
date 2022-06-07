@@ -194,7 +194,7 @@ If a `GroupedDataFrame` is passed then it must include all groups present in the
 
 See also: [`subset!`](@ref), [`filter`](@ref), [`select`](@ref)
 
-`subset` propagates metadata.
+`subset` propagates table and column level metadata.
 
 # Examples
 
@@ -332,7 +332,7 @@ updated.
     which is implemented in DataFrames.jl to ensure support for the
     standard Julia API for collections.
 
-`subset!` retains metadata.
+`subset!` propagates table and column level metadata.
 
 See also: [`subset`](@ref), [`filter!`](@ref), [`select!`](@ref)
 

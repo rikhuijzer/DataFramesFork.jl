@@ -439,6 +439,8 @@ on the type of the sorting columns and on the number of rows in `df`.
 If `view=false` a freshly allocated `DataFrame` is returned.
 If `view=true` then a `SubDataFrame` view into `df` is returned.
 
+`sort` propagates table and column level metadata.
+
 # Examples
 ```jldoctest
 julia> df = DataFrame(x=[3, 1, 2, 1], y=["b", "c", "a", "b"])
@@ -613,7 +615,7 @@ are identical (checked with `===`). Otherwise, if two columns share some part of
 memory but are not identical (e.g. are different views of the same parent
 vector) then `sort!` result might be incorrect.
 
-`sort!` retains metadata.
+`sort!` propagates table and column level metadata.
 
 # Examples
 ```jldoctest
