@@ -160,6 +160,7 @@ The general design rules for propagation of table metadata is as follows:
   preserved only if for some key for all passed tables there is the same value
   of the metadata (e.g., for all tables there is a `"source"` key and the
   value of metadata for this key is the same).
+* an exception is `empty` and `empty!` which drop table level metadata.
 
 The general design rules for propagation of column metadata is as follows:
 * when it is possible to determine statically that column values are unchanged,
@@ -177,42 +178,55 @@ The general design rules for propagation of column metadata is as follows:
   (b) `:x => :y` or `:x => identity => :y` operation specification, or
   (c) automatic column renaming (like in joins or `hcat`) column metadata is
   retained (it is considered to be attached to column value).
+* an exception is `empty` and `empty!` which drop column level metadata.
 
 The concrete functions listed below follow these general principles.
 
 TODO: the list below is not finished do not read it yet
 
-### Operations that preserve table-level metadata
+### Operations that preserve table and column level metadata
 
-* `dropmissing!`
-* `filter!`
-* `insertcols!`
-* `invpermute!`
-* `permute!`
+* `mapcols!` (column level only if passed function is `identity` or `copy`)
 * `rename!`
-* `reverse!`
-* `setindex!`
-* `shuffle!`
+* `only`
+* `mapcols` (column level only if passed function is `identity` or `copy`)
+* `rename`
+* `first`
+* `last`
+* `describe` (column level metadata is dropped)
+* `dropmissing`
+* `dropmissing!`
+* `filter`
+* `filter!`
+* `unique`
 * `unique!`
+* `fillcombinations`
+* `repeat`
+* `disallowmissing`
+* `disallowmissing!`
+* `allowmissing`
+* `allowmissing!`
+* `flatten` (column level metatada is dropped for flattened columns, for which it is dropped)
+* `reverse`
+* `reverse!`
+* `permute!`
+* `invpermute!`
+* `shuffle`
+* `shuffle!`
+* `insertcols` (column level metadata present for previously existing columns)
+* `insertcols!` (column level metadata present for previously existing columns)
 
-### Operations that propagate table-level metadata
 
+* `setindex!`
 * `copy`
 * `getindex` with `!` or `:` as row selector and `:` as column selector
 * `DataFrame`
-
-### Operations that preserve column-level metadata
-
 * `select!` and `transform!` if a single operation is passed selector
   that selects one or multiple columns
 * `leftjoin!` for the left table columns
-* `insertcols!` for existing columns
 * `setindex!` for all columns that are not changed or if it is assigning data
   frame to a data frame with all rows selected
 * broadcasted assignment for all columns that are not changed
-
-### Operations that propagate column-level metadata
-
 * `copy`
 * `getindex` with `!` or `:` as row selector and multicolumn selector
 * `select`, `transform`, and `combine` if a single operation is passed selector
