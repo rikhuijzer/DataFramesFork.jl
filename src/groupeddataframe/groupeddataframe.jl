@@ -324,7 +324,7 @@ function DataFrame(gd::GroupedDataFrame; copycols::Bool=true, keepkeys::Bool=tru
         throw(ArgumentError("It is not possible to construct a `DataFrame`" *
                             "from GroupedDataFrame with `copycols=false`"))
     end
-    length(gd) == 0 && return similar(parent(gd), 0)
+    length(gd) == 0 && return parent(gd)[0:1, :]
     gdidx = gd.idx
     idx = similar(gdidx)
     doff = 1

@@ -295,9 +295,14 @@ Base.deleteat!(df::SubDataFrame, ind) =
 
 function DataFrame(sdf::SubDataFrame; copycols::Bool=true)
     if copycols
-        sdf[:, :]
+        return sdf[:, :]
     else
-        DataFrame(collect(eachcol(sdf)), _names(sdf), copycols=false)
+        new_df = DataFrame(collect(eachcol(sdf)), _names(sdf), copycols=false)
+        _copy_metadata!(new_df, sdf)
+        for col in _names(new_df)
+            _copy_colmetadata!(newdf, col, sdf, col)
+        end
+        return new_df
     end
 end
 

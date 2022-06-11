@@ -59,7 +59,10 @@ function DataFrame(x::T; copycols::Union{Nothing, Bool}=nothing) where {T}
         names = collect(Symbol, Tables.columnnames(cols))
         df = fromcolumns(cols, names, copycols=copycols)
     end
-    _merge_metadata!(df, x)
+    _copy_metadata!(df, x)
+    for col in _names(df)
+        _copy_colmetadata!(df, col, x, col)
+    end
     return df
 end
 

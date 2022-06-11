@@ -222,5 +222,21 @@ TODO: the list below is not finished do not read it yet
 * `sort!`
 * `subset`
 * `subset!`
+* `DataFrame`
+* `getindex` (if multiple column selector is used)
+* `setindex!` (if a column is replaced then its column metadata is dropped unless,
+               a source is another data frame, in which case metadata is copied)
+* `copy`
+* `deleteat!`
+* `allowmissing!`
+* `disallowmissing!`
+* `repeat!`
+* `view` (if `DataFrameRow` or `SubDataFrame` is produced)
+* `groupby`
 
-TODO: `hcat`, `vcat`, `select[!]`, `transform[!]`, `combine`
+TODO: `hcat`, `vcat`, `select[!]`, `transform[!]`, `combine`, `append!`, `push!`, `*join`, broadcasting
+
+# Operations that drop table and column level metadata
+
+* `empty`
+* `empty!`

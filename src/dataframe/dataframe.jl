@@ -98,6 +98,8 @@ use the functionality provided by `select`/`transform`/`combine` functions, use
 functions, or provide type assertions to the variables that hold columns
 extracted from a `DataFrame`.
 
+`DataFrame` preserves table level and column level metadata.
+
 # Examples
 ```jldoctest
 julia> DataFrame((a=[1, 2], b=[3, 4])) # Tables.jl table constructor
@@ -286,7 +288,15 @@ function DataFrame(d::AbstractDict; copycols::Bool=true)
     colindex = Index(colnames)
     columns = Any[v for v in values(d)]
     df = DataFrame(columns, colindex, copycols=copycols)
-    d isa Dict && select!(df, sort!(propertynames(df)))
+    if d isa Dict
+        select!(df, sort!(propertynames(df)))
+    else
+        # AbstractDict can potentially implement Tables.jl table interface
+        _copy_metadata!(df, x)
+        for col in _names(df)
+            _copy_colmetadata!(df, col, x, col)
+        end
+    end
     return df
 end
 
@@ -572,7 +582,10 @@ end
         selected_rows = T === Bool ? _findall(row_inds) : row_inds
         new_df = _threaded_getindex(selected_rows, selected_columns, _columns(df), idx)
     end
-    _merge_metadata!(new_df, df)
+    _copy_metadata!(new_df, df)
+    for col in _names(new_df)
+        _copy_colmetadata!(new_df, col, df, col)
+    end
     return new_df
 end
 
@@ -589,7 +602,10 @@ end
         selected_rows = T === Bool ? _findall(row_inds) : row_inds
         new_df = _threaded_getindex(selected_rows, 1:ncol(df), _columns(df), idx)
     end
-    _merge_metadata!(new_df, df)
+    _copy_metadata!(new_df, df)
+    for col in _names(new_df)
+        _copy_colmetadata!(new_df, col, df, col)
+    end
     return new_df
 end
 
@@ -631,6 +647,7 @@ function insert_single_column!(df::DataFrame, v::AbstractVector, col_ind::Column
             throw(ArgumentError("Cannot assign to non-existent column: $col_ind"))
         end
     end
+    _drop_colmetadata!(df, col_ind)
     return dv
 end
 
@@ -736,10 +753,7 @@ for T in MULTICOLUMNINDEX_TUPLE
             # make sure we make a copy on assignment
             df[!, col] = new_df[:, j]
             # copy column metadata from source to target data frame
-            if hasmetadata(new_df, j) == true
-                meta = empty!(metadata(df, col))
-                merge!(meta, metadata(new_df, j))
-            end
+            _copy_colmetadata!(df, col, new_df, j)
         end
         return df
     end
@@ -762,7 +776,7 @@ for T1 in (:AbstractVector, :Not, :Colon, :(typeof(!))),
             df[row_inds, col] = (row_inds === !) ? mx[:, j] : view(mx, :, j)
             # drop column metadata if columns are replaced
             if row_ind isa typeof(!)
-                hasmetadata(df, col) === true && empty!(metadata(df, col))
+                _drop_colmetadata!(df, col)
             end
         end
         return df
@@ -776,10 +790,15 @@ Copy data frame `df`.
 If `copycols=true` (the default), return a new  `DataFrame` holding
 copies of column vectors in `df`.
 If `copycols=false`, return a new `DataFrame` sharing column vectors with `df`.
+
+`copy` preserves table level and column level metadata.
 """
 function Base.copy(df::DataFrame; copycols::Bool=true)
     cdf = DataFrame(copy(_columns(df)), copy(index(df)), copycols=copycols)
-    _merge_metadata!(cdf, df)
+    _copy_metadata!(cdf, df)
+    for col in _names(cdf)
+        _copy_colmetadata!(cdf, col, df, col)
+    end
     return cdf
 end
 
@@ -791,6 +810,8 @@ Delete rows specified by `inds` from a `DataFrame` `df` in place and return it.
 Internally `deleteat!` is called for all columns so `inds` must be:
 a vector of sorted and unique integers, a boolean vector, an integer,
 or `Not` wrapping any valid selector.
+
+`deleteat!` preserves table level and column level metadata.
 
 # Examples
 ```jldoctest
@@ -869,9 +890,13 @@ end
     empty!(df::DataFrame)
 
 Remove all rows from `df`, making each of its columns empty.
+
+`empty!` does not propagate table level nor column level metadata.
 """
 function Base.empty!(df::DataFrame)
     foreach(empty!, eachcol(df))
+    _drop_metadata!(df)
+    _drop_colmetadata!(df)
     return df
 end
 
@@ -943,6 +968,8 @@ Convert columns `cols` of data frame `df` from element type `T` to
 `cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
 
 If `cols` is omitted all columns in the data frame are converted.
+
+`allowmissing!` preserves table level and column level metadata.
 """
 function allowmissing! end
 
@@ -984,6 +1011,8 @@ If `cols` is omitted all columns in the data frame are converted.
 
 If `error=false` then columns containing a `missing` value will be skipped instead
 of throwing an error.
+
+`disallowmissing!` preserves table level and column level metadata.
 """
 function disallowmissing! end
 
@@ -1532,6 +1561,8 @@ Update a data frame `df` in-place by repeating its rows. `inner` specifies how m
 times each row is repeated, and `outer` specifies how many times the full set
 of rows is repeated. Columns of `df` are freshly allocated.
 
+`repeat!` preserves table level and column level metadata.
+
 # Example
 ```jldoctest
 julia> df = DataFrame(a=1:2, b=3:4)
@@ -1566,7 +1597,14 @@ julia> df
 function repeat!(df::DataFrame; inner::Integer=1, outer::Integer=1)
     inner < 0 && throw(ArgumentError("inner keyword argument must be non-negative"))
     outer < 0 && throw(ArgumentError("outer keyword argument must be non-negative"))
-    return mapcols!(x -> repeat(x, inner = Int(inner), outer = Int(outer)), df)
+    cols = _columns(df)
+    for (i, col) in enumerate(cols)
+        col_new = repeat(col, inner = Int(inner), outer = Int(outer))
+        firstindex(col_new) != 1 && _onebased_check_error(i, col_new)
+        cols[i] = col_new
+    end
+
+    return df
 end
 
 """
@@ -1574,6 +1612,8 @@ end
 
 Update a data frame `df` in-place by repeating its rows the number of times
 specified by `count`. Columns of `df` are freshly allocated.
+
+`repeat!` preserves table level and column level metadata.
 
 # Example
 ```jldoctest
@@ -1598,7 +1638,13 @@ julia> repeat(df, 2)
 """
 function repeat!(df::DataFrame, count::Integer)
     count < 0 && throw(ArgumentError("count must be non-negative"))
-    return mapcols!(x -> repeat(x, Int(count)), df)
+    cols = _columns(df)
+    for (i, col) in enumerate(cols)
+        col_new = repeat(col, inner = Int(inner), outer = Int(outer))
+        firstindex(col_new) != 1 && _onebased_check_error(i, col_new)
+        cols[i] = col_new
+    end
+    return df
 end
 
 # This is not exactly copy! as in general we allow axes to be different
@@ -1607,17 +1653,6 @@ function _replace_columns!(df::DataFrame, newdf::DataFrame)
     copy!(_columns(df), _columns(newdf))
     copy!(_names(index(df)), _names(newdf))
     copy!(index(df).lookup, index(newdf).lookup)
-
-    old_df_colmetadata = getfield(df, :colmetadata)
-    if old_df_colmetadata !== nothing
-        empty!(old_df_colmetadata)
-    end
-    for i in 1:nrow(df)
-        if hasmetadata(newdf, i) === true
-            metadata(df, i) = copy(metadata(newdf, i))
-        end
-    end
-
     return df
 end
 
