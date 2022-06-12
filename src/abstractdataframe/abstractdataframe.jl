@@ -1653,7 +1653,9 @@ source (without copying). This option should be used with caution as mutating
 either the columns in sources or in the returned `DataFrame` might lead to
 the corruption of the other object.
 
-TODO: `hcat` metadata
+`hcat` propagates table level metadata if some key is present
+in all passed data frames and value associated with it is identical in all
+passed data frames. `hcat` propagates column level metadata.
 
 # Example
 ```jldoctest

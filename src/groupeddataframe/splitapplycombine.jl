@@ -101,6 +101,7 @@ function _combine_prepare_norm(gd::GroupedDataFrame,
         newparent = length(gd) > 0 ? parent(gd)[idx, gd.cols] : parent(gd)[1:0, gd.cols]
     end
     added_cols = select(valscat, Not(intersect(gd_keys, _names(valscat))), copycols=false)
+    # TODO: review the line below after metadata handling is added to hcat!
     hcat!(newparent, length(gd) > 0 ? added_cols : similar(added_cols, 0), copycols=false)
     ungroup && return newparent
 

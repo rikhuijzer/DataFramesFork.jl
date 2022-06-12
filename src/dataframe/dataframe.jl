@@ -912,21 +912,19 @@ function hcat!(df1::DataFrame, df2::AbstractDataFrame;
     u = add_names(index(df1), index(df2), makeunique=makeunique)
     for i in 1:length(u)
         df1[!, u[i]] = copycols ? df2[:, i] : df2[!, i]
-        if hasmetadata(df2, i) === true
-            merge!(metadata(df1, u[i]), metadata(df2, i))
-        end
+        _copy_colmetadata!(df1, u[i], df2, i)
     end
-    if hasmetadata(df2) === true
-        meta_df1 = metadata(df1)
-        for (k, v) in metadata(df2)
-            # drop duplicate metadata
-            if k in meta_df1
-                delete!(meta_df1, k)
-            else
-                meta_df1[k] = v
+
+    if hasmetadata(df1) === true && hasmetadata(df2) === true
+        meta1 = metadata(df1)
+        meta2 = metadata(df2)
+        for (k, v) in pairs(meta1)
+            if !(haskey(meta2, k) && isequal(meta2, v))
+                delete!(meta1, k)
             end
         end
     end
+
     return df1
 end
 

@@ -40,6 +40,10 @@ imaginary part of the number. If you need to perform a join on such values use
 CategoricalArrays.jl and transform a column containing such values into a
 `CategoricalVector`.
 
+`leftjoin!` propagates table level metadata if some key is present
+in `df1` and `df2` data frames and value associated with it is identical in them.
+`leftjoin!` propagates column level metadata.
+
 See also: [`leftjoin`](@ref).
 
 # Examples
@@ -130,6 +134,9 @@ function leftjoin!(df1::AbstractDataFrame, df2::AbstractDataFrame;
         # if df1 isa SubDataFrame we must copy columns
         insertcols!(df1, colname => rcol_joined, makeunique=makeunique,
                     copycols=!(df1 isa DataFrame))
+        if hascolmetadata(joiner.dfr, colname)
+            _copy_colmetadata!(df1, ncol(df1), joiner.dfr, colname)
+        end
     end
 
     if source !== nothing
@@ -156,6 +163,17 @@ function leftjoin!(df1::AbstractDataFrame, df2::AbstractDataFrame;
         end
         df1[!, unique_indicator] = indicatorcol
     end
+
+    if hasmetadata(df1) === true && hasmetadata(df2) === true
+        meta1 = metadata(df1)
+        meta2 = metadata(df2)
+        for (k, v) in pairs(meta1)
+            if !(haskey(meta2, k) && isequal(meta2, v))
+                delete!(meta1, k)
+            end
+        end
+    end
+
     return df1
 end
 

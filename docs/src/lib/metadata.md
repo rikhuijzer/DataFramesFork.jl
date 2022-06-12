@@ -176,7 +176,7 @@ The general design rules for propagation of column metadata is as follows:
   `copy` transformation propagates column metadata (but operations like
   `:col => (x -> identity(x) => :col` do not propagate metadata although they do
   not change the data). Similarly in `mapcols`/`mapcols!` only `identity`
-  transformation preserves metadata;
+  and `copy` transformation preserves metadata;
 * when renaming columns using
   (a) the `rename!` or `rename` functions,
   (b) `:x => :y` or `:x => identity => :y` operation specification, or
@@ -237,11 +237,23 @@ TODO: the list below is not finished do not read it yet
 * `repeat!`
 * `view` (if `DataFrameRow` or `SubDataFrame` is produced)
 * `groupby`
-* `vcat` (for metadata that is present and identical for all passed data frames)
+* `vcat` (for table level and column level metadata only if it is present and identical for all passed data frames)
+* `hcat`(for table level metadata only if it is present and identical for all passed data frames)
+* `innerjoin`(for table level metadata only if it is present and identical for all passed data frames)
+* `leftjoin`(for table level metadata only if it is present and identical for all passed data frames)
+* `leftjoin!`(for table level metadata only if it is present and identical for all passed data frames)
+* `rightjoin`(for table level metadata only if it is present and identical for all passed data frames)
+* `outerjoin`(for table level metadata only if it is present and identical for all passed data frames)
+* `semijoin`(for table level metadata only if it is present and identical for all passed data frames)
+* `antijoin`(for table level metadata only if it is present and identical for all passed data frames)
+* `crossjoin`(for table level metadata only if it is present and identical for all passed data frames)
 
-TODO: `hcat`, `select[!]`, `transform[!]`, `combine`, `append!`, `push!`, `*join`, broadcasting
+TODO: `select[!]`, `transform[!]`, `combine`, `append!`, `push!` (and newly added related functions)
 
 # Operations that drop table and column level metadata
 
 * `empty`
 * `empty!`
+* broadcasting (except for broadcasting assignment into a data frame in which case
+  table level metadata and column level metadata for columns that are not changed
+  is preserved)
