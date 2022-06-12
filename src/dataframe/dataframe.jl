@@ -1651,6 +1651,15 @@ function _replace_columns!(df::DataFrame, newdf::DataFrame)
     copy!(_columns(df), _columns(newdf))
     copy!(_names(index(df)), _names(newdf))
     copy!(index(df).lookup, index(newdf).lookup)
+
+    meta = getfiled(newdf, :metadata)
+    if meta !== nothing
+        setfield(df, :metadata, copy(meta))
+    end
+    colmeta = getfiled(newdf, :colmetadata)
+    if colmeta !== nothing
+        setfield(df, :colmetadata, copy(colmeta))
+    end
     return df
 end
 

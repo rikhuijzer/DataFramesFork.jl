@@ -338,13 +338,19 @@ function _replace_columns!(sdf::SubDataFrame, newdf::DataFrame)
     # 1. inserted some columns into pdf
     # or
     # 2. requested to reorder the existing columns
+    # or
+    # 3. dropped some columns
     # and that operation was allowed.
     # Therefore we need to update the parent of sdf in place to make sure
     # it holds only the required target columns in a correct order.
+    pdf = parent(sdf)
     if !colsmatch
-        pdf = parent(sdf)
         @assert pdf isa DataFrame
         select!(pdf, _names(newdf))
+    end
+    _drop_colmetadata!(pdf)
+    for colname in _names(newdf)
+        _copy_colmetadata!(pdf, colname, newdf, colname)
     end
 
     return sdf
