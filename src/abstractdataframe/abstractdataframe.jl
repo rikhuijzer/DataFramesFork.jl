@@ -1752,7 +1752,13 @@ as with `vcat` for `AbstractVector`s.
 `vcat` ignores empty data frames, making it possible to initialize an empty
 data frame at the beginning of a loop and `vcat` onto it.
 
-TODO: `vcat` metadata
+`vcat` propagates table level metadata if some key is present
+in all passed data frames and value associated with it is identical in all
+passed data frames.
+
+`vcat` propagates column level metadata for columns that are present in all
+passed data frames if some key for a given column is present in all passed data
+frames and value associated with it is identical in all passed data frames.
 
 # Example
 ```jldoctest
@@ -2067,7 +2073,51 @@ function _vcat(dfs::AbstractVector{AbstractDataFrame};
             offset += lens[j]
         end
     end
-    return DataFrame(all_cols, header, copycols=false)
+    out_df = DataFrame(all_cols, header, copycols=false)
+
+    # here we know that dfs has at least 1 element
+    if all(x -> hasmetadata(x) === true, dfs)
+        all_meta = [metadata(df) for df in dfs]
+        if length(all_meta) == 1
+            _copy_metadata!(new_df, only(dfs))
+        else
+            new_meta = metadata(new_df)
+            for (k, v) in pairs(all_meta[1])
+                if all(@view all_meta[2:end]) do df
+                    this_meta = metadata(df)
+                    return haskey(this_meta, k) && isequal(this_meta[k], v)
+                end
+                    new_meta[k] = v
+                end
+            end
+        end
+    end
+    for colname in _names(new_df)
+        if length(dfs) == 1
+            _copy_colmetadata!(new_df, only(dfs))
+        else
+            if all(dfs) do df
+                hasproperty(df, colname) && hasmetadata(df, colname) === true
+            end
+                all_meta = [colmetadata(df, colname) for df in dfs]
+                if length(all_meta) == 1
+                    _copy_colmetadata!(new_df, colname, only(dfs), colname)
+                else
+                    new_meta = colmetadata(new_df, colname)
+                    for (k, v) in pairs(all_meta[1])
+                        if all(@view all_meta[2:end]) do df
+                            this_meta = colmetadata(df)
+                            return haskey(this_meta, k) && isequal(this_meta[k], v)
+                        end
+                            new_meta[k] = v
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return out_df
 end
 
 """

@@ -233,8 +233,9 @@ TODO: the list below is not finished do not read it yet
 * `repeat!`
 * `view` (if `DataFrameRow` or `SubDataFrame` is produced)
 * `groupby`
+* `vcat` (for metadata that is present and identical for all passed data frames)
 
-TODO: `hcat`, `vcat`, `select[!]`, `transform[!]`, `combine`, `append!`, `push!`, `*join`, broadcasting
+TODO: `hcat`, `select[!]`, `transform[!]`, `combine`, `append!`, `push!`, `*join`, broadcasting
 
 # Operations that drop table and column level metadata
 
