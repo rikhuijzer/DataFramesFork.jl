@@ -32,6 +32,8 @@ If `false` is returned this means that column `:col` of data frame `df` does not
 have any column level metadata defined. If `true` is returned it means that for
 `:col` column some metadata is defined.
 
+If `:col` is not present in `df` an error is thrown.
+
 Although `hascolmetadata` is guaranteed to return `Bool` value in DataFrames.jl
 in generic code it is recommended to check its return value against `true` and
 `false` explicitly using the `===` operator. The reason is that, in code
@@ -50,6 +52,8 @@ In DataFrames.jl `colmetadata(df, :col)` (alternatively string or
 column number can be used) always returns `Dict{String, Any}` storing
 key-value mappings of column level metadata for column `:col`.
 To add or update metadata mutate the returned dictionary.
+
+If `:col` is not present in `df` an error is thrown.
 
 ### General design principles for use of metadata
 
